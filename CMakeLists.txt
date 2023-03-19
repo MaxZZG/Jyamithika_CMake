@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.3)
-project(CGAA_CMAKE)
+project(Jyamithika_CMAKE)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -24,27 +24,41 @@ else (GLM_FOUND)
     message (SEND_ERROR "Unable to locate GLM")
 endif (GLM_FOUND)
 
-# link source code
-add_executable(CGAA_CMAKE main.cpp ${DIR_SRCS} ${DIR_SRCS01} ${DIR_SRCS02} ${DIR_SRCS03} ${DIR_SRCS04} ${DIR_SRCS05}
-        ${DIR_SRCS06} ${DIR_SRCS07})
+# Find all example .cpp
+file(
+        GLOB_RECURSE mains RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/example"
+        "${CMAKE_CURRENT_SOURCE_DIR}/example/BSPVisualization.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/example/ConstructingConvexhull_2d_simulation.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/example/Convexhull3dSimulation.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/example/KDTree2DSimulation.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/example/PolygonTriangulationSimulation.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/example/QuadTreeVisualization.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/example/SimpleVoronoi2dSimulation.cpp"
+)
 
 # Find GLFW3
 find_package(GLFW3 REQUIRED)
 message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIR}")
 if(GLFW3_FOUND)
     include_directories(${GLFW3_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} ${GLFW3_LIBRARY})
 endif()
+
+# link source code
+foreach(mainfile IN LISTS mains)
+    # Get file name without directory
+    get_filename_component(mainname ${mainfile} NAME_WE)
+    add_executable(${mainname} ${CMAKE_CURRENT_SOURCE_DIR}/example/${mainfile} ${DIR_SRCS} ${DIR_SRCS01}
+            ${DIR_SRCS02} ${DIR_SRCS03} ${DIR_SRCS04} ${DIR_SRCS05} ${DIR_SRCS06} ${DIR_SRCS07})
+    if(GLFW3_FOUND)
+        target_link_libraries(${mainname} ${GLFW3_LIBRARY})
+    endif()
+endforeach()
 
 if (WIN32)
     # copy dll to .exe folder
     add_custom_target(DllCopy ALL
             COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${PROJECT_SOURCE_DIR}/thirdparty/bin/"
-            "${CMAKE_BINARY_DIR}/$<CONFIG>/"
-
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${PROJECT_SOURCE_DIR}/resources/"
             "${CMAKE_BINARY_DIR}/$<CONFIG>/"
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
             VERBATIM)

@@ -20,8 +20,8 @@
 #include "GraphicUtils\Geometry\GLine.h"
 
 #include "Jyamithika\Core\Primitives\Point.h"
-#include "Jyamithika\Core\Primitives\Bounds.h"
-#include "Jyamithika\Voronoi.h"
+#include "Jyamithika\Core\Primitives\PolygonDCEL.h"
+#include "Jyamithika\Convexhull.h"
 
 #include <algorithm>
 #include <chrono>
@@ -57,25 +57,32 @@ float lastFrame = 0.0f;
 
 void setup_pointcloud(std::vector<jmk::Point2d>& points)
 {
-	std::vector<float> x_values;
-	std::vector<float> y_values;
-
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-
-	for (float i = 1; i < 99; i++)
-		x_values.push_back((i - 49)/50);
-	
-	std::shuffle(x_values.begin(), x_values.end(), std::default_random_engine(seed));
-	y_values = x_values;
-	std::shuffle(y_values.begin(), y_values.end(), std::default_random_engine(seed));
-
-	for(int i=0; i< x_values.size(); i++)
-		points.push_back(jmk::Point2d(x_values[i], y_values[i]));
-
-	std::sort(points.begin(), points.end(), jmk::sort2DLRTB);
-	std::unique(points.begin(), points.end());
+	points.push_back(jmk::Point2d(0.7, 0.4));
+	points.push_back(jmk::Point2d(0.4, 0.1));
+	points.push_back(jmk::Point2d(0.3, 0.8));
+	points.push_back(jmk::Point2d(0.05, 0.7));
+	points.push_back(jmk::Point2d(-0.05, 0.8));
+	points.push_back(jmk::Point2d(-0.5, 0.5));
+	points.push_back(jmk::Point2d(-0.2, 0.2));
+	points.push_back(jmk::Point2d(-0.4, 0.05));
+	points.push_back(jmk::Point2d(-0.6, 0.15));
+	points.push_back(jmk::Point2d(-0.7, -0.2));
+	points.push_back(jmk::Point2d(-0.3, -0.5));
+	points.push_back(jmk::Point2d(-0.1, -0.3));
+	points.push_back(jmk::Point2d(0.2, -0.8));
+	points.push_back(jmk::Point2d(0.1, -0.05));
+	points.push_back(jmk::Point2d(0.5, -0.1));
 }
 
+void setup_pointcloud_2(std::vector<jmk::Point2d>& points)
+{
+	points.push_back(jmk::Point2d(0.2, 0.4));
+	points.push_back(jmk::Point2d(0.6, 0.2));
+	points.push_back(jmk::Point2d(0.8, 0.5));
+	points.push_back(jmk::Point2d(0.9, 0.7));
+	points.push_back(jmk::Point2d(0.5, 0.9));
+	points.push_back(jmk::Point2d(0.4, 0.6));
+}
 
 int main(void)
 {
@@ -93,7 +100,7 @@ int main(void)
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 		/* Create a windowed mode window and its OpenGL context */
-		window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Voronoi 2d Simulation", NULL, NULL);
+		window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Convexhull 2D", NULL, NULL);
 		if (!window)
 		{
 			glfwTerminate();
@@ -109,6 +116,8 @@ int main(void)
 			std::cout << "Failed to initialize GLAD" << std::endl;
 			return -1;
 		}
+
+		//glEnable(GL_DEPTH_TEST);
 	}
 
 	//Set up ImGui
@@ -127,43 +136,48 @@ int main(void)
 	}
 
 	std::vector<jmk::Point2d> points;
+	std::vector<jmk::Point2d> hull_points_giftwrapping;
+	std::vector<jmk::Point2d> hull_points_grahams;
+
 	std::vector<float> point_data;
-	std::vector<jmk::Edge2dSimple> edges;
-	std::vector<float> edge_data;
-	std::vector<float> face_edge_data;
+	std::vector<float> convexhull_giftwrapping_edge_data;
+	std::vector<float> convexhull_grahams_edge_data;
 
 	setup_pointcloud(points);
 	getReactanglePointClouds(points, point_data);
-	jmk::BoundRectangle rect{ -1.0,1.0,1.0,-1.0 };
-	
-	auto startTime = high_resolution_clock::now();
-	jmk::constructVoronoiDiagram_fortunes(points, edges, rect);	
-	auto endTime = high_resolution_clock::now();
-	std::chrono::duration<double> diff = endTime - startTime;
-	std::cout << "Voronoi Diagram 2d construction time - " << diff.count() << std::endl;
 
-	get2DLinePointsFromEdgeList(edges, edge_data);
-	get2DLinePointsFromFaceEdgeList(edges, face_edge_data);
+	jmk::convexhull2DGiftwrapping(points,hull_points_giftwrapping);
+	jmk::Polygon2d polygon1(hull_points_giftwrapping);
+	auto edge_list = polygon1.getEdgeList();
+	get2DLinePointsFromDCEL2d(edge_list, convexhull_giftwrapping_edge_data);
+
+	jmk::convexhull2DModifiedGrahams(points, hull_points_grahams);
+	jmk::Polygon2d polygon2(hull_points_grahams);
+	edge_list = polygon2.getEdgeList();
+	get2DLinePointsFromDCEL2d(edge_list, convexhull_grahams_edge_data);
 
 	VertexArray VAO_points;
 	VertexBuffer VBO_points(point_data.data(), point_data.size());
 	VAO_points.addVertexLayout(0, 2, GL_FALSE, 2 * sizeof(float), 0);
 
-	VertexArray VAO_edges;
-	VertexBuffer VBO_edge(edge_data.data(), edge_data.size());
-	VAO_edges.addVertexLayout(0, 2, GL_FALSE, 2 * sizeof(float), 0);
+	VertexArray VAO_convexhulledges;
+	VertexBuffer VBO_edge(convexhull_giftwrapping_edge_data.data(), convexhull_giftwrapping_edge_data.size());
+	VAO_convexhulledges.addVertexLayout(0, 2, GL_FALSE, 2 * sizeof(float), 0);
 
-	VertexArray VAO_face_edges;
-	VertexBuffer VBO_face_edge(face_edge_data.data(), face_edge_data.size());
-	VAO_face_edges.addVertexLayout(0, 2, GL_FALSE, 2 * sizeof(float), 0);
+	VertexArray VAO_convexhullgrahams;
+	VertexBuffer VBO_edge_grahms(convexhull_grahams_edge_data.data(), convexhull_grahams_edge_data.size());
+	VAO_convexhullgrahams.addVertexLayout(0, 2, GL_FALSE, 2 * sizeof(float), 0);
 
-	// TODO no need for multiple shaders. Just use uniforms. Currently we need to switch the shaders which adds 
-	// lots for overhead
-	ShaderProgram shader("../resources/Shaders/triangle2d.shader");
-	ShaderProgram line_shader("../resources/Shaders/line.shader");
-	ShaderProgram line2_shader("../resources/Shaders/line2.shader");
+	ShaderProgram shader("..//resources//Shaders//triangle2d.shader");
+	ShaderProgram line_shader("..//resources//Shaders//generic_line.shader");
+	unsigned int line_color_loc = line_shader.getUniformId("line_color");
 
-	bool show_points = true, show_voronoi = false, show_delanuay = false;
+	glm::vec3 red = glm::vec3(0.95f, 0.02f, 0.03f);
+	glm::vec3 blue = glm::vec3(0.55f, 0.42f, 0.83f);
+	glm::vec3 green = glm::vec3(0.15f, 0.92f, 0.13f);
+	glm::vec3 yellow = glm::vec3(0.9f, 0.95f, 0.2f);
+
+	bool show_points = true, show_convexhull_giftwrapping = false, show_convexhull_grahams = false;
 
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
@@ -182,8 +196,9 @@ int main(void)
 		processInput(window);
 		/* Render here */
 
-		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+		glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 		if (show_points)
 		{
@@ -192,26 +207,28 @@ int main(void)
 			glDrawArrays(GL_TRIANGLES, 0, point_data.size() / 2);
 		}
 
-		if (show_voronoi)
+		if (show_convexhull_giftwrapping)
 		{
 			line_shader.activeAsCurrentShader();
-			VAO_edges.bindVertexArray();
-			glLineWidth(2);
-			glDrawArrays(GL_LINES, 0, edge_data.size() / 2);
+			glLineWidth(4);
+			glUniform3fv(line_color_loc, 1, glm::value_ptr(red));
+			VAO_convexhulledges.bindVertexArray();
+			glDrawArrays(GL_LINES, 0, convexhull_giftwrapping_edge_data.size() / 2);
 		}
 
-		if (show_delanuay)
+		if (show_convexhull_grahams)
 		{
-			line2_shader.activeAsCurrentShader();
-			VAO_face_edges.bindVertexArray();
-			glLineWidth(0.5);
-			glDrawArrays(GL_LINES, 0, face_edge_data.size() / 2);
+			line_shader.activeAsCurrentShader();
+			glLineWidth(4);
+			glUniform3fv(line_color_loc, 1, glm::value_ptr(green));
+			VAO_convexhullgrahams.bindVertexArray();
+			glDrawArrays(GL_LINES, 0, convexhull_grahams_edge_data.size() / 2);
 		}
 
-		ImGui::Begin(" Sample : Voronoi Diagram and Delaunay triangulation in 2d");
-		ImGui::Checkbox("Points", &show_points);
-		ImGui::Checkbox("Voronoi", &show_voronoi);
-		ImGui::Checkbox("Delaunay", &show_delanuay);
+		ImGui::Begin(" Sample : Convexhull in 2D");
+		ImGui::Checkbox("Original Points", &show_points);
+		ImGui::Checkbox("Show Convexhull Giftwrapping", &show_convexhull_giftwrapping);
+		ImGui::Checkbox("Show Convexhull Grahams", &show_convexhull_grahams);
 
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		ImGui::End();
