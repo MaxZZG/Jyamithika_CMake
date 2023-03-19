@@ -237,7 +237,7 @@ int main(void)
 	glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model));
 	glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(projection));
 
-	ShaderProgram cubeShader("C:/Users/intellect/source/repos/Jyamithika/Graphics/GraphicUtils/Shaders/cube.shader");
+	ShaderProgram cubeShader("..//resources//Shaders//cube.shader");
 	cubeShader.activeAsCurrentShader();
 
 	glm::vec3 all_point_color_vec(0.0, 0.0, 0.5);

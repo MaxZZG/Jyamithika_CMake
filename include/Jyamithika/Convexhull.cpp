@@ -4,7 +4,7 @@
 #include "Core/Inclusion.h"
 
 #include <algorithm>
-#include <Iterator>
+#include <iterator>
 #include <list>
 
 using namespace jmk;
