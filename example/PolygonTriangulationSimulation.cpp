@@ -2,9 +2,9 @@
 #include <GLFW\glfw3.h>
 #include <array>
 
-#include "GLM\glm.hpp"
-#include "GLM\gtc\matrix_transform.hpp"
-#include "GLM\gtc\type_ptr.hpp"
+#include "glm.hpp"
+#include "gtc\matrix_transform.hpp"
+#include "gtc\type_ptr.hpp"
 
 #include "GraphicUtils\Imgui\imgui.h"
 #include "GraphicUtils\Imgui\imgui_impl_glfw.h"
